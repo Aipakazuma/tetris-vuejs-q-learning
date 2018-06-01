@@ -4,35 +4,9 @@ from selenium.webdriver.common.by import By
 import numpy as np
 
 
-class QLearning():
-    def __init__(self, shape, gamma=0.99):
-        self.q_table = np.zeros(shape)
-        self.gamma = 
-
-    def update(self):
-        pass
-
-
-class Agent():
-    def __init__(self, eps=1e-2):
-        # [state, action]
-        self.model = QLearning(shape=[20, 10, 4])
-        self.eps = eps
-
-    def action(self, next_state):
-        if self.eps < np.random.uniform(0, 1):
-            next_action = np.argmax(self.model.q_table[next_state])
-        else:
-            next_action = np.random.randint(0, 4)
-
-        return next_action
-
-    def update(self):
-        self.model.update()
-
-
 class Game():
     def __init__(self):
+        self.name = 'tetris'
         options = ChromeOptions()
         # ヘッドレスモードを有効にする（次の行をコメントアウトすると画面が表示される）。
         # options.add_argument('--headless')
@@ -41,20 +15,21 @@ class Game():
         
         # Googleのトップ画面を開く。
         self.driver.get('http://localhost:1234/')
-        self.actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
+        self.enable_actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
 
     def reset(self):
         self.game_start()
-        return np.zeros([20, 10]), 0
 
     def step(self, action):
-        a = self.actions[action]
-        driver.find_element_by_tag_name('body').send_keys(a)
-        
-        states = np.zeros([20, 10])
-        reward = 0
+        self.driver.find_element_by_tag_name('body').send_keys(action)
 
-        return states, reward
+        block_texts = self.driver.find_elements_by_class_name('block-text')
+        states = []
+        for block_text in block_texts:
+            states.append(block_text.get_attribute('data-value'))
+
+        reward = self.driver.find_element_by_id('point').text
+        return states, int(reward), self.game_over()
 
     def game_start(self):
         start_button = self.driver.find_element_by_id('button')
@@ -65,14 +40,12 @@ class Game():
         if len(ids) > 0:
             return True
 
-      return False
+        return False
 
 
 def main(episode=10):
     game = Game()
-    agent = Agents()
-
-    state, reward = game.reset()
+    _, reward = game.reset()
 
     # gameの進行
     try:
@@ -81,18 +54,13 @@ def main(episode=10):
             rewards = 0
             # action
             while True:
-                action = agent.action(state)
-                next_state, reward = game.step(action)
+                action = np.random.choice(Game.enable_actions)
+                _, reward = game.step(action)
                 rewards += reward
                 
                 if game.game_over():
                     print('end episode: {}, reward: {}'.format(e, rewards))
                     break
-
-                # update
-                agents.update()
-                state = next_state
-
 
     except KeyboardInterrupt:
         driver.quit()  # ブラウザーを終了する。
