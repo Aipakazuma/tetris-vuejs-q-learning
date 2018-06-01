@@ -28,8 +28,12 @@ class Game():
         for block_text in block_texts:
             states.append(block_text.get_attribute('data-value'))
 
-        reward = self.driver.find_element_by_id('point').text
-        return states, int(reward), self.game_over()
+        reward = int(self.driver.find_element_by_id('point').text)
+        game_over = self.game_over()
+        if game_over:
+            reward -= 1
+
+        return states, reward, game_over
 
     def game_start(self):
         start_button = self.driver.find_element_by_id('button')

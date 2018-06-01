@@ -10,7 +10,7 @@ class DQNAgent:
     Multi Layer Perceptron with Experience Replay
     """
 
-    def __init__(self, enable_actions, environment_name):
+    def __init__(self, enable_actions, environment_name, epsilon=1e-1):
         # parameters
         self.name = os.path.splitext(os.path.basename(__file__))[0]
         self.environment_name = environment_name
@@ -23,6 +23,7 @@ class DQNAgent:
         self.exploration = 0.1
         self.model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         self.model_name = "{}.ckpt".format(self.environment_name)
+        self.epsilon = epsilon
 
         # replay memory
         self.D = deque(maxlen=self.replay_memory_size)
@@ -38,14 +39,18 @@ class DQNAgent:
         self.x = tf.placeholder(tf.float32, [None, 200])
 
         # fully connected layer (200)
-        W_fc1 = tf.Variable(tf.truncated_normal([200, 200], stddev=0.01))
-        b_fc1 = tf.Variable(tf.zeros([200]))
+        W_fc1 = tf.Variable(tf.truncated_normal([200, 400], stddev=0.01))
+        b_fc1 = tf.Variable(tf.zeros([400]))
         h_fc1 = tf.nn.relu(tf.matmul(self.x, W_fc1) + b_fc1)
 
         # output layer (n_actions)
-        W_out = tf.Variable(tf.truncated_normal([200, self.n_actions], stddev=0.01))
+        W_fc2 = tf.Variable(tf.truncated_normal([400, 100], stddev=0.01))
+        b_fc2 = tf.Variable(tf.zeros([100]))
+        h_fc2 = tf.matmul(h_fc1, W_fc2) + b_fc2
+
+        W_out = tf.Variable(tf.truncated_normal([100, self.n_actions], stddev=0.01))
         b_out = tf.Variable(tf.zeros([self.n_actions]))
-        self.y = tf.matmul(h_fc1, W_out) + b_out
+        self.y = tf.matmul(h_fc2, W_out) + b_out
 
         # loss function
         self.y_ = tf.placeholder(tf.float32, [None, self.n_actions])
@@ -66,8 +71,8 @@ class DQNAgent:
         # Q(state, action) of all actions
         return self.sess.run(self.y, feed_dict={self.x: [state]})[0]
 
-    def select_action(self, state, epsilon):
-        if np.random.rand() <= epsilon:
+    def select_action(self, state):
+        if np.random.rand() <= self.epsilon:
             # random
             return np.random.choice(self.enable_actions)
         else:
