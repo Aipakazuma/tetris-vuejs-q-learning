@@ -33,6 +33,7 @@ class DQNAgent:
 
         # variables
         self.current_loss = 0.0
+        self.tmp_q_values = None
 
     def init_model(self):
         # input layer (20 x 10 = 200)
@@ -53,8 +54,19 @@ class DQNAgent:
         self.y = tf.matmul(h_fc2, W_out) + b_out
 
         # loss function
-        self.y_ = tf.placeholder(tf.float32, [None, self.n_actions])
-        self.loss = tf.reduce_mean(tf.square(self.y_ - self.y))
+        # 教師信号？
+        self.a = tf.placeholder(tf.int64, [None])
+        self.y_ = tf.placeholder(tf.float32, [None])
+
+        a_one_hot = tf.one_hot(self.a, self.n_actions, 1.0, 0.0)  # 行動をone hot vectorに変換する
+        m = tf.multiply(self.y, a_one_hot)
+        q_value = tf.reduce_sum(m, reduction_indices=1)  # 行動のQ値の計算
+
+        # エラークリップ
+        error = tf.abs(self.y_ - q_value)
+        quadratic_part = tf.clip_by_value(error, 0.0, 1.0)
+        linear_part = error - quadratic_part
+        self.loss = tf.reduce_mean(0.5 * tf.square(quadratic_part) + linear_part)  # 誤差関数
 
         # train operation
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
@@ -72,12 +84,13 @@ class DQNAgent:
         return self.sess.run(self.y, feed_dict={self.x: [state]})[0]
 
     def select_action(self, state):
+        self.tmp_q_values = self.Q_values(state)
         if np.random.rand() <= self.epsilon:
             # random
             return np.random.choice(self.enable_actions)
         else:
             # max_action Q(state, action)
-            return self.enable_actions[np.argmax(self.Q_values(state))]
+            return self.enable_actions[np.argmax(self.tmp_q_values)]
 
     def store_experience(self, state, action, reward, state_1, terminal):
         self.D.append((state, action, reward, state_1, terminal))
@@ -89,10 +102,13 @@ class DQNAgent:
         # sample random minibatch
         minibatch_size = min(len(self.D), self.minibatch_size)
         minibatch_indexes = np.random.randint(0, len(self.D), minibatch_size)
+        action_batch = []
+        y_batch = []
 
         for j in minibatch_indexes:
             state_j, action_j, reward_j, state_j_1, terminal = self.D[j]
             action_j_index = self.enable_actions.index(action_j)
+            action_batch.append(action_j_index)
 
             y_j = self.Q_values(state_j)
 
@@ -104,12 +120,17 @@ class DQNAgent:
 
             state_minibatch.append(state_j)
             y_minibatch.append(y_j)
+            y_batch.append(y_j[action_j_index])
 
         # training
-        self.sess.run(self.training, feed_dict={self.x: state_minibatch, self.y_: y_minibatch})
+        self.sess.run(self.training, feed_dict={self.x: state_minibatch,
+                                                self.y_: y_batch,
+                                                self.a: action_batch})
 
         # for log
-        self.current_loss = self.sess.run(self.loss, feed_dict={self.x: state_minibatch, self.y_: y_minibatch})
+        self.current_loss = self.sess.run(self.loss, feed_dict={self.x: state_minibatch,
+                                                                self.y_: y_batch,
+                                                                self.a: action_batch})
 
     def load_model(self, model_path=None):
         if model_path:

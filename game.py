@@ -2,6 +2,7 @@ from selenium.webdriver import Chrome, ChromeOptions
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import numpy as np
+from time import time
 
 
 class Game():
@@ -16,6 +17,7 @@ class Game():
         # Googleのトップ画面を開く。
         self.driver.get('http://localhost:1234/')
         self.enable_actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
+        self.time = time()
 
     def reset(self):
         self.game_start()
@@ -24,9 +26,8 @@ class Game():
         self.driver.find_element_by_tag_name('body').send_keys(action)
 
         block_texts = self.driver.find_elements_by_class_name('block-text')
-        states = []
-        for block_text in block_texts:
-            states.append(block_text.get_attribute('data-value'))
+        # ここが遅い
+        states = [int(block_text.get_attribute('data-value')) for block_text in block_texts]
 
         reward = int(self.driver.find_element_by_id('point').text)
         game_over = self.game_over()
