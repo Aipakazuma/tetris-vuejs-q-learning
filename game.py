@@ -29,6 +29,7 @@ class Game():
         states = [int(i) for i in block_text.get_attribute('data-value').split(',')]
 
         reward = int(self.driver.find_element_by_id('point').text)
+        reward += 0.01
         game_over = self.game_over()
         if game_over:
             reward -= 1

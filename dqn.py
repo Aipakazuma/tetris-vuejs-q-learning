@@ -6,6 +6,15 @@ import tensorflow as tf
 import random
 
 
+def copy_params(src, dst):
+    src_params = [v for v in tf.trainable_variables() if v.name.startswith('Q')]
+    dst_params = [v for v in tf.trainable_variables() if v.name.startswith('target_Q')]
+
+    op = [d.assign(s) for s, d in zip(src_params, dst_params)]
+
+    return op
+
+
 class DQNAgent:
     """
     Multi Layer Perceptron with Experience Replay
@@ -21,7 +30,6 @@ class DQNAgent:
         self.replay_memory_size = 10000
         self.learning_rate = 0.001
         self.discount_factor = 0.99
-        self.exploration = 0.3
         self.model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         self.model_name = "{}.ckpt".format(self.environment_name)
         self.epsilon = epsilon
@@ -30,30 +38,45 @@ class DQNAgent:
         self.D = deque(maxlen=self.replay_memory_size)
 
         # model
-        self.init_model()
+        self.x, self.y = self.init_model(scope='Q')
+        self.target_x, self.target_y = self.init_model(scope='target_Q')
+        self.training_op()
+
+        self.update_target_network = copy_params(self.y, self.target_y)
+
+        # save
+        self.saver = tf.train.Saver()
+
+        # session
+        self.sess = tf.Session()
+        self.sess.run(tf.global_variables_initializer())
 
         # variables
         self.current_loss = 0.0
         self.tmp_q_values = None
 
-    def init_model(self):
-        # input layer (20 x 10 = 200)
-        self.x = tf.placeholder(tf.float32, [None, 200])
+    def init_model(self, scope):
+        with tf.variable_scope(scope):
+            # input layer (20 x 10 = 200)
+            x = tf.placeholder(tf.float32, [None, 200])
 
-        # fully connected layer (200)
-        W_fc1 = tf.Variable(tf.truncated_normal([200, 400], stddev=0.01))
-        b_fc1 = tf.Variable(tf.zeros([400]))
-        h_fc1 = tf.nn.relu(tf.matmul(self.x, W_fc1) + b_fc1)
+            # fully connected layer (200)
+            W_fc1 = tf.Variable(tf.truncated_normal([200, 400], stddev=0.01))
+            b_fc1 = tf.Variable(tf.zeros([400]))
+            h_fc1 = tf.nn.relu(tf.matmul(x, W_fc1) + b_fc1)
 
-        # output layer (n_actions)
-        W_fc2 = tf.Variable(tf.truncated_normal([400, 100], stddev=0.01))
-        b_fc2 = tf.Variable(tf.zeros([100]))
-        h_fc2 = tf.matmul(h_fc1, W_fc2) + b_fc2
+            # output layer (n_actions)
+            W_fc2 = tf.Variable(tf.truncated_normal([400, 100], stddev=0.01))
+            b_fc2 = tf.Variable(tf.zeros([100]))
+            h_fc2 = tf.matmul(h_fc1, W_fc2) + b_fc2
 
-        W_out = tf.Variable(tf.truncated_normal([100, self.n_actions], stddev=0.01))
-        b_out = tf.Variable(tf.zeros([self.n_actions]))
-        self.y = tf.matmul(h_fc2, W_out) + b_out
+            W_out = tf.Variable(tf.truncated_normal([100, self.n_actions], stddev=0.01))
+            b_out = tf.Variable(tf.zeros([self.n_actions]))
+            y = tf.matmul(h_fc2, W_out) + b_out
 
+        return x, y
+
+    def training_op(self):
         # loss function
         # 教師信号？
         self.a = tf.placeholder(tf.int64, [None])
@@ -73,12 +96,8 @@ class DQNAgent:
         optimizer = tf.train.AdamOptimizer(learning_rate=self.learning_rate)
         self.training = optimizer.minimize(self.loss)
 
-        # saver
-        self.saver = tf.train.Saver()
-
-        # session
-        self.sess = tf.Session()
-        self.sess.run(tf.global_variables_initializer())
+    def update_target(self):
+        self.sess.run(self.update_target_network)
 
     def Q_values(self, state):
         # Q(state, action) of all actions
@@ -117,7 +136,7 @@ class DQNAgent:
 
         terminals = np.array(terminals) + 0
         _actions = self.Q_values(states)
-        next_actions = self.Q_values(states_1)
+        next_actions = self.sess.run(self.target_y, feed_dict={self.target_x: states_1})[0]
         y_batch = np.array(rewards) + (1 - terminals) + self.discount_factor * np.max(next_actions)  # NOQA
 
         # training

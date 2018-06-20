@@ -7,12 +7,13 @@ from game import Game
 if __name__ == "__main__":
     # parameters
     n_epochs = 1000
-    warmup = 500
+    warmup = 2500
     steps = 0
+    n_update_target_network = 10000
 
     # environment, agent
     env = Game()
-    agent = DQNAgent(env.enable_actions, env.name, epsilon=3e-1)
+    agent = DQNAgent(env.enable_actions, env.name, epsilon=0.3)
     
     try:
         for e in range(n_epochs):
@@ -39,7 +40,7 @@ if __name__ == "__main__":
 
                 # store experience
                 agent.store_experience(state_t, action_t, reward_t, state_t_1, terminal)
-                print(agent.tmp_q_values, np.argmax(agent.tmp_q_values))
+                print(agent.tmp_q_values, np.argmax(agent.tmp_q_values), agent.enable_actions.index(action_t))
 
                 # for log
                 frame += 1
@@ -53,6 +54,9 @@ if __name__ == "__main__":
             # warmup中は学習しない
             if steps > warmup:
                 agent.backword()
+
+                if steps % n_update_target_network:
+                    agent.update_target()
 
             print("epoch: {:03d}/{:03d} |  loss: {:.4f} | Q_max: {:.4f} | total reward: {} | steps: {}".format(
                 e, n_epochs - 1, loss / frame, Q_max / frame, total_reward, steps))
