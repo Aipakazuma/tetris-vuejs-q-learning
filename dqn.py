@@ -3,6 +3,7 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import random
 
 
 class DQNAgent:
@@ -16,11 +17,11 @@ class DQNAgent:
         self.environment_name = environment_name
         self.enable_actions = enable_actions
         self.n_actions = len(self.enable_actions)
-        self.minibatch_size = 32
+        self.batch_size = 256
         self.replay_memory_size = 10000
         self.learning_rate = 0.001
         self.discount_factor = 0.99
-        self.exploration = 0.1
+        self.exploration = 0.3
         self.model_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
         self.model_name = "{}.ckpt".format(self.environment_name)
         self.epsilon = epsilon
@@ -81,10 +82,10 @@ class DQNAgent:
 
     def Q_values(self, state):
         # Q(state, action) of all actions
-        return self.sess.run(self.y, feed_dict={self.x: [state]})[0]
+        return self.sess.run(self.y, feed_dict={self.x: state})[0]
 
     def select_action(self, state):
-        self.tmp_q_values = self.Q_values(state)
+        self.tmp_q_values = self.Q_values([state])
         if np.random.rand() <= self.epsilon:
             # random
             return np.random.choice(self.enable_actions)
@@ -95,42 +96,39 @@ class DQNAgent:
     def store_experience(self, state, action, reward, state_1, terminal):
         self.D.append((state, action, reward, state_1, terminal))
 
-    def experience_replay(self):
-        state_minibatch = []
-        y_minibatch = []
-
+    def backword(self):
         # sample random minibatch
-        minibatch_size = min(len(self.D), self.minibatch_size)
-        minibatch_indexes = np.random.randint(0, len(self.D), minibatch_size)
+        batch_size = min(len(self.D), self.batch_size)
         action_batch = []
         y_batch = []
 
-        for j in minibatch_indexes:
-            state_j, action_j, reward_j, state_j_1, terminal = self.D[j]
-            action_j_index = self.enable_actions.index(action_j)
-            action_batch.append(action_j_index)
+        states = []
+        actions = []
+        rewards = []
+        states_1 = []
+        terminals = []
+        samples = random.sample(self.D, self.batch_size)
+        for s, a, r, s_1, t in samples:
+            states.append(s)
+            actions.append(self.enable_actions.index(a))
+            rewards.append(r)
+            states_1.append(s_1)
+            terminals.append(t)
 
-            y_j = self.Q_values(state_j)
-
-            if terminal:
-                y_j[action_j_index] = reward_j
-            else:
-                # reward_j + gamma * max_action' Q(state', action')
-                y_j[action_j_index] = reward_j + self.discount_factor * np.max(self.Q_values(state_j_1))  # NOQA
-
-            state_minibatch.append(state_j)
-            y_minibatch.append(y_j)
-            y_batch.append(y_j[action_j_index])
+        terminals = np.array(terminals) + 0
+        _actions = self.Q_values(states)
+        next_actions = self.Q_values(states_1)
+        y_batch = np.array(rewards) + (1 - terminals) + self.discount_factor * np.max(next_actions)  # NOQA
 
         # training
-        self.sess.run(self.training, feed_dict={self.x: state_minibatch,
+        self.sess.run(self.training, feed_dict={self.x: states,
                                                 self.y_: y_batch,
-                                                self.a: action_batch})
+                                                self.a: actions})
 
         # for log
-        self.current_loss = self.sess.run(self.loss, feed_dict={self.x: state_minibatch,
+        self.current_loss = self.sess.run(self.loss, feed_dict={self.x: states,
                                                                 self.y_: y_batch,
-                                                                self.a: action_batch})
+                                                                self.a: actions})
 
     def load_model(self, model_path=None):
         if model_path:

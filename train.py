@@ -7,7 +7,7 @@ from game import Game
 if __name__ == "__main__":
     # parameters
     n_epochs = 1000
-    warmup = 1
+    warmup = 500
     steps = 0
 
     # environment, agent
@@ -36,15 +36,10 @@ if __name__ == "__main__":
                 # observe environment
                 state_t_1, reward_t, terminal = env.step(action_t)
                 total_reward += reward_t
-                print(reward_t, agent.tmp_q_values)
 
                 # store experience
                 agent.store_experience(state_t, action_t, reward_t, state_t_1, terminal)
-
-                # experience replay
-                # warmup中は学習しない
-                if steps > warmup:
-                    agent.experience_replay()
+                print(agent.tmp_q_values, np.argmax(agent.tmp_q_values))
 
                 # for log
                 frame += 1
@@ -52,7 +47,12 @@ if __name__ == "__main__":
 
                 if steps > warmup:
                     loss += agent.current_loss
-                    Q_max += np.max(agent.Q_values(state_t))
+                    Q_max += np.max(agent.Q_values([state_t]))
+
+            # experience replay
+            # warmup中は学習しない
+            if steps > warmup:
+                agent.backword()
 
             print("epoch: {:03d}/{:03d} |  loss: {:.4f} | Q_max: {:.4f} | total reward: {} | steps: {}".format(
                 e, n_epochs - 1, loss / frame, Q_max / frame, total_reward, steps))
