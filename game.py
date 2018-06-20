@@ -25,9 +25,8 @@ class Game():
     def step(self, action):
         self.driver.find_element_by_tag_name('body').send_keys(action)
 
-        block_texts = self.driver.find_elements_by_class_name('block-text')
-        # ここが遅い
-        states = [int(block_text.get_attribute('data-value')) for block_text in block_texts]
+        block_text = self.driver.find_element_by_class_name('block-text')
+        states = [int(i) for i in block_text.get_attribute('data-value').split(',')]
 
         reward = int(self.driver.find_element_by_id('point').text)
         game_over = self.game_over()
