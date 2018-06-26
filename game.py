@@ -3,6 +3,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import numpy as np
 from time import time
+from copy import copy
 
 
 class Game():
@@ -18,6 +19,7 @@ class Game():
         self.driver.get('http://localhost:1234/')
         self.enable_actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
         self.time = time()
+        self.before_state = None
 
     def reset(self):
         self.game_start()
@@ -29,12 +31,22 @@ class Game():
         states = [int(i) for i in block_text.get_attribute('data-value').split(',')]
 
         reward = int(self.driver.find_element_by_id('point').text)
-        reward += 0.01
+        s = np.array(states).reshape(20, 10)
+        under_state = s[-1]
+        if self.before_state is None:
+            self.before_state = copy(under_state)
+            a = self.before_state
+        else:
+            a = np.clip(under_state - self.before_state, 0, 1)
+            self.before_state = copy(under_state)
+
+        reward += np.sum(a) * 0.5
         game_over = self.game_over()
         if game_over:
-            reward -= 1
+            reward -= 3
+            self.before_state = None
 
-        return states, reward, game_over
+        return states, reward, game_over, {}
 
     def game_start(self):
         start_button = self.driver.find_element_by_id('button')
