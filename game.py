@@ -1,28 +1,33 @@
-from selenium.webdriver import Chrome, ChromeOptions
+from selenium.webdriver import Chrome
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 import numpy as np
 from time import time
 from copy import copy
+from settings import GAME_URL
 
 
 class Game():
     def __init__(self):
         self.name = 'tetris'
-        options = ChromeOptions()
+        options = Options()
         # ヘッドレスモードを有効にする（次の行をコメントアウトすると画面が表示される）。
-        # options.add_argument('--headless')
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox')
+        options.add_argument('--disable-gpu')
         # ChromeのWebDriverオブジェクトを作成する。
-        self.driver = Chrome(options=options)
+        self.driver = Chrome(chrome_options=options)
         
         # Googleのトップ画面を開く。
-        self.driver.get('http://localhost:1234/')
+        self.driver.get(GAME_URL)
         self.enable_actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
         self.time = time()
         self.before_state = None
 
     def reset(self):
         self.game_start()
+        return None, None
 
     def step(self, action):
         self.driver.find_element_by_tag_name('body').send_keys(action)
@@ -62,20 +67,21 @@ class Game():
 
 def main(episode=10):
     game = Game()
-    _, reward = game.reset()
 
     # gameの進行
     try:
         for e in range(episode):
+            _, reward = game.reset()
             print('start episode: {}'.format(e))
             rewards = 0
             # action
             while True:
-                action = np.random.choice(Game.enable_actions)
-                _, reward = game.step(action)
+                action = np.random.choice(game.enable_actions)
+                states, reward, done, _ = game.step(action)
                 rewards += reward
+                print(np.array(states).reshape(20, 10), reward)
                 
-                if game.game_over():
+                if done:
                     print('end episode: {}, reward: {}'.format(e, rewards))
                     break
 
