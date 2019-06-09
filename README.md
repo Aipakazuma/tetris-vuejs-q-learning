@@ -12,6 +12,10 @@ $ docker run --rm -v $(pwd):/app -it reinforce_learning_platform python game.py 
 
 ### DQN
 
+```sh
+$ docker run --rm -v $(pwd):/app -it reinforce_learning_platform python keras_rl.py http://host.docker.internal:9000/
+```
+
 ### Rainbow
 
 ### Ape-x
