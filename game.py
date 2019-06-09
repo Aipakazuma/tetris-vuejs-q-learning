@@ -2,6 +2,7 @@ from selenium.webdriver import Chrome
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
+from chromedriver_binary.utils import get_chromedriver_path
 import numpy as np
 from time import time
 from copy import copy
@@ -13,9 +14,10 @@ class Game():
         self.name = 'tetris'
         options = Options()
         # ヘッドレスモードを有効にする（次の行をコメントアウトすると画面が表示される）。
+        # options.binary_location = get_chromedriver_path()
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
-        options.add_argument('--disable-gpu')
+        # options.add_argument('--disable-gpu')
         # ChromeのWebDriverオブジェクトを作成する。
         self.driver = Chrome(chrome_options=options)
         
@@ -82,7 +84,7 @@ def main(episode=10):
                 print(np.array(states).reshape(20, 10), reward)
                 
                 if done:
-                    print('end episode: {}, reward: {}'.format(e, rewards))
+                    print('end episode: {}, reward: {}'.format(e, rewards, reward, done))
                     break
 
     except KeyboardInterrupt:
