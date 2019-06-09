@@ -10,7 +10,6 @@ from rl.memory import SequentialMemory
 from rl.core import Processor
 import os
 
-import sys
 from game import Game
 from time import time
 
@@ -67,9 +66,9 @@ class MyProcessor(Processor):
 
 
 class MyEnv(gym.Env):
-    def __init__(self):
+    def __init__(self, game_url=None):
         super().__init__()
-        self.env = Game()
+        self.env = Game(game_url=game_url)
         self.action_space = gym.spaces.Discrete(4)
         self.observation_space = gym.spaces.Box(
             low=0,
@@ -100,7 +99,8 @@ class MyEnv(gym.Env):
 
 if __name__ == '__main__':
     # Get the environment and extract the number of actions.
-    env = MyEnv()
+    game_url = sys.argv[1]
+    env = MyEnv(game_url=game_url)
     np.random.seed(123)
     env.seed(123)
     nb_actions = env.action_space.n
@@ -152,7 +152,7 @@ if __name__ == '__main__':
     dqn.fit(env, nb_steps=100000, visualize=False, verbose=2, callbacks=[tb_callback])
 
     # After training is done, we save the final weights.
-    dqn.save_weights('dqn_{}_weights.h5f'.format('tetris'), overwrite=True)
+    # dqn.save_weights('dqn_{}_weights.h5f'.format('tetris'), overwrite=True)
     # dqn.load_weights('dqn_tetris_weights.h5f')
 
     # Finally, evaluate our algorithm for 5 episodes.

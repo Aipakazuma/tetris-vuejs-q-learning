@@ -13,3 +13,5 @@ RUN apt update \
 
 ADD requirements.txt /app/
 RUN pip install -U pip && pip install -r requirements.txt
+# RUN pip install tensorflow-gpu==1.13.1
+RUN pip install tensorflow==1.13.1
