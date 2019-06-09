@@ -1,26 +1,17 @@
-## 強化学習で遊ぶ
+# 強化学習で遊ぶ
 
-
-```sh
-$ pip install selenium
-```
-
-
-```
-selenium.common.exceptions.WebDriverException: Message: unknown error: call function result missing 'value'
-```
-
-エラー
-
-https://qiita.com/orangeboy/items/6fdddebc1dc919f6d9e1
-
-
-動いた
-
-
-あとでDockerfileにする.
+## Usage
 
 ```sh
 $ docker build . -t reinforce_learning_platform 
-$ docker run --rm -v $(pwd):/app -it reinforce_learning_platform bash
+$ docker run --rm -v $(pwd):/app -it reinforce_learning_platform python game.py http://host.docker.internal:9000/
 ```
+
+
+## Learning
+
+### DQN
+
+### Rainbow
+
+### Ape-x

@@ -7,22 +7,21 @@ import numpy as np
 from time import time
 from copy import copy
 from settings import GAME_URL
+import sys
 
 
 class Game():
-    def __init__(self):
+    def __init__(self, game_url=None):
         self.name = 'tetris'
         options = Options()
         # ヘッドレスモードを有効にする（次の行をコメントアウトすると画面が表示される）。
-        # options.binary_location = get_chromedriver_path()
         options.add_argument('--headless')
         options.add_argument('--no-sandbox')
-        # options.add_argument('--disable-gpu')
         # ChromeのWebDriverオブジェクトを作成する。
         self.driver = Chrome(chrome_options=options)
         
         # Googleのトップ画面を開く。
-        self.driver.get(GAME_URL)
+        self.driver.get(GAME_URL if game_url is None else game_url)
         self.enable_actions = [Keys.LEFT, Keys.RIGHT, Keys.UP, Keys.DOWN]
         self.time = time()
         self.before_state = None
@@ -67,8 +66,8 @@ class Game():
         return False
 
 
-def main(episode=10):
-    game = Game()
+def main(episode=10, game_url=None):
+    game = Game(game_url=game_url)
 
     # gameの進行
     try:
@@ -91,4 +90,5 @@ def main(episode=10):
         driver.quit()  # ブラウザーを終了する。
 
 if __name__ == '__main__':
-    main()
+    game_url = sys.argv[1]
+    main(game_url=game_url)
